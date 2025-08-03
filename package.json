@@ -1,0 +1,32 @@
+{
+  "name": "Galactic_Core",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "rbxtsc",
+    "watch": "rbxtsc -w",
+    "start:dev": "concurrently \"npx rbxtsc -w\" \"rojo serve\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.12.1",
+  "devDependencies": {
+    "@rbxts/compiler-types": "3.0.0-types.0",
+    "@rbxts/types": "^1.0.867",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "concurrently": "^9.2.0",
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.3",
+    "eslint-plugin-roblox-ts": "^1.0.0",
+    "prettier": "^3.6.2",
+    "roblox-ts": "^3.0.0",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@rbxts/services": "^1.5.5"
+  }
+}
