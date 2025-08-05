@@ -1,7 +1,6 @@
-import { generateGrid } from "./services/grid.service";
 import { GridRemotesEnum, Remotes } from "@shared/remotes/grid.remotes";
 
-generateGrid();
+import "./services/datastore.service";
 
 Remotes.Server.Get(GridRemotesEnum.PlaceBuilding).Connect((player, data) => {
 	print(`Richiesta piazzamento da ${player.Name}:`);
