@@ -6,6 +6,8 @@
   "scripts": {
     "build": "rbxtsc",
     "watch": "rbxtsc -w",
+    "start:watch": "npx rbxtsc -w",
+    "start:rojo": "rojo serve",
     "start:dev": "concurrently \"npx rbxtsc -w\" \"rojo serve\""
   },
   "keywords": [],
@@ -27,6 +29,9 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@rbxts/services": "^1.5.5"
+    "@rbxts/net": "^3.0.10",
+    "@rbxts/roact": "^3.0.1",
+    "@rbxts/services": "^1.5.5",
+    "@rbxts/trove": "^1.3.0"
   }
 }
