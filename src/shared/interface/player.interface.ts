@@ -1,13 +1,9 @@
 export interface PlayerData {
 	coreTier: number;
-	grid: Array<{
-		x: number;
-		y: number;
-		state: "locked" | "unlocked" | "occupied";
-		building?: string; // id struttura piazzata
-	}>;
+	// NEW: Un array che contiene solo gli edifici piazzati sulla griglia.
+	placedBuildings: PlacedBuilding[];
 	inventory: Array<{
-		building: string;
+		buildingId: string; // Cambiato da 'building' per coerenza
 		count: number;
 	}>;
 	resources: {
@@ -15,4 +11,17 @@ export interface PlayerData {
 		energy: number;
 		// altri tipi...
 	};
+}
+
+export interface PlacedBuilding {
+	// NEW: Un ID unico per questa specifica istanza di edificio.
+	// Fondamentale per poterlo identificare (es. per fare un upgrade).
+	instanceId: string;
+	buildingId: string; // es: "gold_mine"
+	tier: number;
+	// NEW: La posizione dell'angolo in alto a sinistra dell'edificio sulla griglia.
+	position: { x: number; y: number };
+	status: "placed" | "upgrading" | "construction";
+	startedAt?: number;
+	finishedAt?: number;
 }
