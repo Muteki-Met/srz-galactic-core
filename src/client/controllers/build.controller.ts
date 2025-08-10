@@ -4,7 +4,7 @@ import { BUILDINGS } from "@shared/constants/building.conf";
 import { PlacementService } from "@client/services/placement.service";
 import { BuildingDefinition } from "@shared/interface/building.interface";
 import { GridUtils } from "@shared/utils/grid.utils";
-import { ClientFunctions } from "@shared/network";
+import { ClientEvents, ClientFunctions } from "@client/network";
 
 @Controller({})
 export class BuildController implements OnStart {
@@ -147,12 +147,13 @@ export class BuildController implements OnStart {
 	}
 
 	private handlePlacementRequest(): void {
-		if (!this.isBuildModeActive || !this.selectedBuildingId) return;
+		if (!this.isBuildModeActive || !this.buildingRef || !this.lastCheckedPosition || !this.isLastPositionValid)
+			return;
 
-		print("Placement requested by player.");
+		print(`Richiesta di piazzamento per ${this.buildingRef.id}`);
 		// TODO: Calcolare la posizione finale della griglia
 		// TODO: Inviare la richiesta al server tramite un RemoteEvent
-
+		ClientEvents.PlaceBuilding.fire(this.buildingRef.id, this.lastCheckedPosition);
 		this.exitBuildMode();
 	}
 

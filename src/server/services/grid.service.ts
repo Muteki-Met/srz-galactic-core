@@ -3,7 +3,7 @@ import { BUILDINGS } from "@shared/constants/building.conf";
 import { CORE_TIERS } from "@shared/constants/grid.conf";
 import { BuildingDefinition } from "@shared/interface/building.interface";
 import { PlayerData } from "@shared/interface/player.interface";
-import { ServerFunctions } from "@shared/network";
+import { ServerEvents, ServerFunctions } from "@server/network";
 
 /**
  * A service for managing grid logic such as placing and validating building positions.
@@ -12,17 +12,27 @@ import { ServerFunctions } from "@shared/network";
 @Service({})
 export class GridService implements OnStart {
 	onStart(): void {
+		// Dentro onStart()
 		ServerFunctions.ValidatePlacement.setCallback((player, buildingId, position) => {
-			print(`[Server] Ricevuta richiesta di validazione da ${player.Name} per ${buildingId}`);
+			const playerData = this.getPlayerData(player);
+			if (!playerData) return false;
 
-			// 3. Qui devi richiamare la tua logica di validazione esistente.
-			//    Avrai bisogno di un modo per ottenere i dati del giocatore.
-			//    Per ora, possiamo simulare. In futuro, useremo un vero PlayerDataService.
-			//const playerData = this.getPlayerData(player); // Funzione da creare/adattare
-			//if (!playerData) return false;
+			const gridPosition = { x: position.X, y: position.Y };
+			return this.isAreaAvailable(playerData, buildingId, gridPosition);
+		});
+		ServerEvents.PlaceBuilding.connect((player, buildingId, position) => {
+			print(`[Server] Ricevuta richiesta di PIAZZAMENTO da ${player.Name}`);
 
-			//return this.isAreaAvailable(playerData, buildingId, position);
-			return true;
+			const playerData = this.getPlayerData(player);
+			if (!playerData) return;
+
+			const gridPosition = { x: position.X, y: position.Y };
+			if (this.isAreaAvailable(playerData, buildingId, gridPosition)) {
+				print("Piazzamento valido! Aggiorno i dati...");
+				// QUI, in futuro, modificheremo l'array playerData.placedBuildings
+			} else {
+				warn("Piazzamento non valido! Il client potrebbe essere desincronizzato.");
+			}
 		});
 	}
 
@@ -105,4 +115,14 @@ export class GridService implements OnStart {
 	// Future methods will go here, e.g.:
 	// public placeBuilding(...) { ... }
 	// public removeBuilding(...) { ... }
+	private getPlayerData(player: Player): PlayerData {
+		// In futuro, qui chiederemo i dati a un altro servizio.
+		// Per ora, restituiamo un giocatore "vuoto" per i test.
+		return {
+			coreTier: 1,
+			placedBuildings: [], // La cosa importante è che ci sia questo array
+			inventory: [],
+			resources: { gold: 999, energy: 999 },
+		};
+	}
 }
