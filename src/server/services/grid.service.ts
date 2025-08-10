@@ -7,6 +7,7 @@ import { ServerEvents, ServerFunctions } from "@server/network";
 import { BuildingService } from "@server/services/building.service";
 import { PlayerDataService } from "@server/services/player-data.service";
 import { GridUtils } from "@shared/utils/grid.utils";
+import { ResourceNodeService } from "@server/services/resource-node.service";
 
 /**
  * A service for managing grid logic such as placing and validating building positions.
@@ -17,6 +18,7 @@ export class GridService implements OnStart {
 	constructor(
 		private readonly buildingService: BuildingService,
 		private readonly playerDataService: PlayerDataService,
+		private readonly resourceNodeService: ResourceNodeService,
 	) {}
 
 	onStart(): void {
@@ -88,6 +90,47 @@ export class GridService implements OnStart {
 		if (!buildingDef) {
 			warn(`[GridService] Attempted to check placement for invalid buildingId: ${newBuildingId}`);
 			return false;
+		}
+
+		if (buildingDef.requiresResourceType) {
+			// Questo è un estrattore, ha bisogno di un nodo risorsa.
+			const targetNode = this.resourceNodeService.getNodeAtPosition(newPosition);
+
+			// Regola 1: Deve essere piazzato su un nodo.
+			if (!targetNode) {
+				print("Validazione fallita: Deve essere piazzato su un giacimento.");
+				return false;
+			}
+
+			// Regola 2: Il tipo di risorsa deve corrispondere.
+			if (targetNode.resourceType !== buildingDef.requiresResourceType) {
+				print(
+					`Validazione fallita: Tipo di risorsa errato. Richiesto ${buildingDef.requiresResourceType}, trovato ${targetNode.resourceType}.`,
+				);
+				return false;
+			}
+
+			// Regola 3: L'estrattore deve entrare completamente nel giacimento.
+			if (
+				newPosition.x < targetNode.position.x ||
+				newPosition.y < targetNode.position.y ||
+				newPosition.x + buildingDef.size.x > targetNode.position.x + targetNode.size.x ||
+				newPosition.y + buildingDef.size.y > targetNode.position.y + targetNode.size.y
+			) {
+				print("Validazione fallita: L'estrattore non entra nel giacimento.");
+				return false;
+			}
+
+			// Se tutte le regole per le risorse sono passate,
+			// dobbiamo comunque controllare che non ci siano ALTRI edifici sopra.
+			// La logica di collisione esistente qui sotto farà proprio questo.
+		} else {
+			// Se l'edificio NON richiede una risorsa, non può essere piazzato su un nodo.
+			const targetNode = this.resourceNodeService.getNodeAtPosition(newPosition);
+			if (targetNode) {
+				print("Validazione fallita: Non puoi costruire edifici normali sui giacimenti.");
+				return false;
+			}
 		}
 
 		const coreTierInfo = CORE_TIERS.find((t) => t.tier === playerData.coreTier);

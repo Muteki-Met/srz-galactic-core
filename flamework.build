@@ -16,7 +16,9 @@
 		"Galactic_Core:out/server/services/player-data.service@PlayerDataService": "server/services/player-data.service@PlayerDataService",
 		"Galactic_Core:out/server/services/player-connection.service@PlayerConnectionService": "server/services/player-connection.service@PlayerConnectionService",
 		"Galactic_Core:out/client/controllers/grid-renderer.controller@GridRendererController": "client/controllers/grid-renderer.controller@GridRendererController",
-		"Galactic_Core:out/client/controllers/player-data.controller@PlayerDataController": "client/controllers/player-data.controller@PlayerDataController"
+		"Galactic_Core:out/client/controllers/player-data.controller@PlayerDataController": "client/controllers/player-data.controller@PlayerDataController",
+		"Galactic_Core:out/server/services/resource-node.service@ResourceNodeService": "server/services/resource-node.service@ResourceNodeService",
+		"Galactic_Core:out/client/controllers/resource-node.controller@ResourceNodeController": "client/controllers/resource-node.controller@ResourceNodeController"
 	},
 	"metadata": {}
 }

@@ -4,7 +4,7 @@ import { ClientEvents } from "@client/network";
 import { PlayerProfile } from "@shared/interface/player.interface";
 import Signal from "@rbxts/lemon-signal";
 
-@Controller({})
+@Controller({ loadOrder: 0 })
 export class PlayerDataController implements OnStart {
 	public readonly onProfileLoaded = new Signal<() => void>(); // Crea il segnale
 	private profile?: PlayerProfile;

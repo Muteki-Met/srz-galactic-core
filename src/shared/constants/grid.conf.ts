@@ -2,9 +2,16 @@ export const GRID_SIZE = 13;
 export const GRID_CELL_SIZE = 6;
 export const CELL_SIZE = 6;
 export const CORE_TIERS = [
-	{ tier: 1, gridSize: 20 },
-	{ tier: 2, gridSize: 23 },
-	{ tier: 3, gridSize: 26 },
-	{ tier: 4, gridSize: 12 },
-	// ...aggiungi altri tier se vuoi!
+	{ tier: 1, gridSize: 20 }, // Inizio
+	{ tier: 2, gridSize: 24 },
+	{ tier: 3, gridSize: 28 },
+	{ tier: 4, gridSize: 32 },
+	{ tier: 5, gridSize: 36 }, // Mid-game
+	{ tier: 6, gridSize: 40 },
+	{ tier: 7, gridSize: 44 },
+	{ tier: 8, gridSize: 48 },
+	{ tier: 9, gridSize: 52 }, // Late-game
+	{ tier: 10, gridSize: 56 },
+	{ tier: 11, gridSize: 60 },
+	{ tier: 12, gridSize: 64 }, // End-game, una bella griglia 64x64
 ];

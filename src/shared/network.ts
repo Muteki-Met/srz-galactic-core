@@ -2,9 +2,12 @@
 
 import { Networking } from "@flamework/networking";
 import { PlayerProfile } from "@shared/interface/player.interface";
+import { ResourceNode } from "@shared/interface/resource.interface";
 
 interface ServerFunctions {
 	ValidatePlacement: (buildingId: string, position: Vector2) => boolean;
+
+	GetResourceNodes(): ResourceNode[];
 }
 
 interface ClientFunctions {}

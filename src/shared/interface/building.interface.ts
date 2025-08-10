@@ -28,6 +28,7 @@ export interface BuildingDefinition {
 	id: string; // Id logico (es: "core", "gold_mine")
 	name: string; // Nome visualizzato
 	category: BuildingCategory; // Tipo (resource, defense, ecc.)
+	requiresResourceType?: "gold" | "energy";
 	model: string; // Prefisso modello (es: "Core", "GoldMine")
 	size: { x: number; y: number }; // Dimensione in celle (es: 2x2)
 	maxTier: number; // Tier massimo raggiungibile
