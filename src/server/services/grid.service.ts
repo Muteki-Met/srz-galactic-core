@@ -2,8 +2,11 @@ import { OnStart, Service } from "@flamework/core";
 import { BUILDINGS } from "@shared/constants/building.conf";
 import { CORE_TIERS } from "@shared/constants/grid.conf";
 import { BuildingDefinition } from "@shared/interface/building.interface";
-import { PlayerData } from "@shared/interface/player.interface";
+import { PlacedBuilding, PlayerProfile } from "@shared/interface/player.interface";
 import { ServerEvents, ServerFunctions } from "@server/network";
+import { BuildingService } from "@server/services/building.service";
+import { PlayerDataService } from "@server/services/player-data.service";
+import { GridUtils } from "@shared/utils/grid.utils";
 
 /**
  * A service for managing grid logic such as placing and validating building positions.
@@ -11,10 +14,15 @@ import { ServerEvents, ServerFunctions } from "@server/network";
  */
 @Service({})
 export class GridService implements OnStart {
+	constructor(
+		private readonly buildingService: BuildingService,
+		private readonly playerDataService: PlayerDataService,
+	) {}
+
 	onStart(): void {
 		// Dentro onStart()
 		ServerFunctions.ValidatePlacement.setCallback((player, buildingId, position) => {
-			const playerData = this.getPlayerData(player);
+			const playerData = this.playerDataService.getPlayerData(player);
 			if (!playerData) return false;
 
 			const gridPosition = { x: position.X, y: position.Y };
@@ -23,13 +31,30 @@ export class GridService implements OnStart {
 		ServerEvents.PlaceBuilding.connect((player, buildingId, position) => {
 			print(`[Server] Ricevuta richiesta di PIAZZAMENTO da ${player.Name}`);
 
-			const playerData = this.getPlayerData(player);
+			const playerData = this.playerDataService.getPlayerData(player);
 			if (!playerData) return;
 
 			const gridPosition = { x: position.X, y: position.Y };
 			if (this.isAreaAvailable(playerData, buildingId, gridPosition)) {
 				print("Piazzamento valido! Aggiorno i dati...");
+				// ---> INIZIA LA NUOVA LOGICA <---
+				const playerData = this.playerDataService.getPlayerData(player);
+				if (!playerData) return;
+
+				const gridCenter = GridUtils.getGridCenter(playerData);
+				if (!gridCenter) return;
+				this.buildingService.createBuildingModel(buildingId, position, gridCenter);
 				// QUI, in futuro, modificheremo l'array playerData.placedBuildings
+				// ---> INIZIA LA NUOVA LOGICA QUI <---
+				const newBuilding: PlacedBuilding = {
+					instanceId: `${buildingId}_${os.time()}`, // Un ID unico temporaneo
+					buildingId: buildingId,
+					tier: 1,
+					position: gridPosition,
+					status: "built",
+				};
+				playerData.placedBuildings.push(newBuilding);
+				print(`Dati aggiornati per ${player.Name}. Edifici totali: ${playerData.placedBuildings.size()}`);
 			} else {
 				warn("Piazzamento non valido! Il client potrebbe essere desincronizzato.");
 			}
@@ -55,7 +80,7 @@ export class GridService implements OnStart {
 	 * @returns `true` if the area is available, `false` otherwise.
 	 */
 	public isAreaAvailable(
-		playerData: PlayerData,
+		playerData: PlayerProfile,
 		newBuildingId: string,
 		newPosition: { x: number; y: number },
 	): boolean {
@@ -66,7 +91,7 @@ export class GridService implements OnStart {
 		}
 
 		const coreTierInfo = CORE_TIERS.find((t) => t.tier === playerData.coreTier);
-		const maxGridSize = coreTierInfo ? coreTierInfo.maxGrid : 0;
+		const maxGridSize = coreTierInfo ? coreTierInfo.gridSize : 0;
 		const newBuildingSize = buildingDef.size;
 
 		// 1. Boundary Check: Ensure the building is within the player's grid limits.
@@ -110,19 +135,5 @@ export class GridService implements OnStart {
 		}
 
 		return true; // Area is available
-	}
-
-	// Future methods will go here, e.g.:
-	// public placeBuilding(...) { ... }
-	// public removeBuilding(...) { ... }
-	private getPlayerData(player: Player): PlayerData {
-		// In futuro, qui chiederemo i dati a un altro servizio.
-		// Per ora, restituiamo un giocatore "vuoto" per i test.
-		return {
-			coreTier: 1,
-			placedBuildings: [], // La cosa importante è che ci sia questo array
-			inventory: [],
-			resources: { gold: 999, energy: 999 },
-		};
 	}
 }

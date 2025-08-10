@@ -11,7 +11,12 @@
 		"Galactic_Core:out/shared/network@functions": "shared/network@functions",
 		"Galactic_Core:out/client/network@functions": "client/network@functions",
 		"Galactic_Core:out/server/network@functions": "server/network@functions",
-		"Galactic_Core:out/shared/network@events": "shared/network@events"
+		"Galactic_Core:out/shared/network@events": "shared/network@events",
+		"Galactic_Core:out/server/services/building.service@BuildingService": "server/services/building.service@BuildingService",
+		"Galactic_Core:out/server/services/player-data.service@PlayerDataService": "server/services/player-data.service@PlayerDataService",
+		"Galactic_Core:out/server/services/player-connection.service@PlayerConnectionService": "server/services/player-connection.service@PlayerConnectionService",
+		"Galactic_Core:out/client/controllers/grid-renderer.controller@GridRendererController": "client/controllers/grid-renderer.controller@GridRendererController",
+		"Galactic_Core:out/client/controllers/player-data.controller@PlayerDataController": "client/controllers/player-data.controller@PlayerDataController"
 	},
 	"metadata": {}
 }

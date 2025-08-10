@@ -37,7 +37,7 @@
     "@rbxts/lemon-signal": "^1.2.0",
     "@rbxts/maid": "^1.1.0",
     "@rbxts/net": "^3.0.10",
-    "@rbxts/profile-store": "^1.0.3",
+    "@rbxts/profile-store": "^1.",
     "@rbxts/roact": "^3.0.1",
     "@rbxts/services": "^1.5.5",
     "@rbxts/sift": "^0.0.11",

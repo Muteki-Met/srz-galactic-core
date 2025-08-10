@@ -5,6 +5,7 @@ import { PlacementService } from "@client/services/placement.service";
 import { BuildingDefinition } from "@shared/interface/building.interface";
 import { GridUtils } from "@shared/utils/grid.utils";
 import { ClientEvents, ClientFunctions } from "@client/network";
+import { PlayerDataController } from "@client/controllers/player-data.controller";
 
 @Controller({})
 export class BuildController implements OnStart {
@@ -19,7 +20,10 @@ export class BuildController implements OnStart {
 
 	private readonly modelFolder = ReplicatedStorage.FindFirstChild("Models");
 
-	constructor(private readonly placementService: PlacementService) {}
+	constructor(
+		private readonly placementService: PlacementService,
+		private readonly playerDataController: PlayerDataController,
+	) {}
 
 	public onStart(): void {
 		print("BuildController started");
@@ -94,7 +98,7 @@ export class BuildController implements OnStart {
 					// Rendi la parte non-collidibile
 					descendant.CanCollide = false;
 					// Rendila semi-trasparente
-					descendant.Transparency = 0.5;
+					descendant.Transparency = 0.25;
 					// Dagli un materiale "energetico"
 					descendant.Material = Enum.Material.ForceField;
 				}
@@ -107,43 +111,46 @@ export class BuildController implements OnStart {
 	}
 
 	private updateHologramPosition(): void {
-		// TODO: Implementare la logica di raycasting per trovare la posizione
-		// sulla griglia e aggiornare il CFrame dell'ologramma.
-		// Qui useremo il futuro PlacementService.
-		// Controlla di avere un ologramma
 		if (!this.hologram || !this.buildingRef) return;
 
-		// Chiedi al PlacementService la posizione
+		// 1. Ottieni le informazioni di piazzamento dal servizio
 		const placementInfo = this.placementService.getPlacementInfo();
-		const gridPos = placementInfo?.gridPosition;
+		if (!placementInfo) return; // Se non c'è una posizione, non fare nulla
 
-		// Controlla se la nuova posizione è DIVERSA dall'ultima che abbiamo controllato
+		const gridPos = placementInfo.gridPosition;
+
+		// 2. Controlla se ci siamo spostati in una nuova cella SOLO per la validazione del server
 		if (
 			!this.lastCheckedPosition ||
-			this.lastCheckedPosition.X !== gridPos?.X ||
-			this.lastCheckedPosition.Y !== gridPos?.Y
+			this.lastCheckedPosition.X !== gridPos.X ||
+			this.lastCheckedPosition.Y !== gridPos.Y
 		) {
-			// È una nuova cella! Memorizzala.
 			this.lastCheckedPosition = gridPos;
-
-			// ORA, e solo ora, chiama il server.
-			// GlobalFunctions.ValidatePlacement.invokeServer(...) è una Promise
-			// 1. Ottieni la funzione specifica che vuoi chiamare.
-			ClientFunctions.ValidatePlacement.invoke(this.buildingRef.id, gridPos!).then((isValid: boolean) => {
+			// Chiama il server per sapere se questa nuova cella è valida
+			ClientFunctions.ValidatePlacement.invoke(this.buildingRef.id, gridPos).then((isValid: boolean) => {
 				this.isLastPositionValid = isValid;
 				this.setHologramColor(isValid);
 			});
 		}
-		// Se abbiamo una posizione valida...
-		if (placementInfo) {
-			// ...calcola il CFrame del mondo usando GridUtils
-			const gridPos = placementInfo.gridPosition;
-			const buildingSize = new Vector2(this.buildingRef.size.x, this.buildingRef.size.y);
-			const worldCFrame = GridUtils.gridToWorldCFrame(gridPos, buildingSize);
 
-			// Sposta l'ologramma
-			this.hologram.PivotTo(worldCFrame);
-		}
+		// 3. SPOSTA L'OLOGRAMMA OGNI FRAME, INDIPENDENTEMENTE DAL CONTROLLO PRECEDENTE
+
+		const profile = this.playerDataController.getProfile();
+		if (!profile) return;
+		const coreBuilding = profile.placedBuildings.find((b) => b.buildingId === "core");
+		if (!coreBuilding) return;
+
+		const gridCenter = GridUtils.getGridCenter(profile);
+		if (!gridCenter) return;
+
+		const buildingSize = new Vector2(this.buildingRef.size.x, this.buildingRef.size.y);
+		// Questa funzione ora calcola la posizione del mondo corretta,
+		// tenendo già conto del centro della base.
+		// Passa il gridCenter alla nostra nuova funzione
+		const finalWorldCFrame = GridUtils.gridToWorldCFrame(gridPos, buildingSize, gridCenter);
+
+		// Sposta l'ologramma direttamente al CFrame calcolato.
+		this.hologram.PivotTo(finalWorldCFrame);
 	}
 
 	private handlePlacementRequest(): void {

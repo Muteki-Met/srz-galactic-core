@@ -1,4 +1,4 @@
-export interface PlayerData {
+export interface PlayerProfile {
 	coreTier: number;
 	// NEW: Un array che contiene solo gli edifici piazzati sulla griglia.
 	placedBuildings: PlacedBuilding[];
@@ -21,7 +21,7 @@ export interface PlacedBuilding {
 	tier: number;
 	// NEW: La posizione dell'angolo in alto a sinistra dell'edificio sulla griglia.
 	position: { x: number; y: number };
-	status: "placed" | "upgrading" | "construction";
+	status: "placed" | "upgrading" | "construction" | "built";
 	startedAt?: number;
 	finishedAt?: number;
 }
