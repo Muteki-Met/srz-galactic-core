@@ -7,8 +7,9 @@ export interface PlayerProfile {
 		count: number;
 	}>;
 	resources: {
-		gold: number;
-		energy: number;
+		ferronoxite: number;
+		voltherium: number;
+		silphite: number;
 		// altri tipi...
 	};
 }

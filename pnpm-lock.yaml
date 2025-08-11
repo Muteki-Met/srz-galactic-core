@@ -32,9 +32,18 @@ importers:
       '@rbxts/profile-store':
         specifier: ^1.0.3
         version: 1.0.3
-      '@rbxts/roact':
-        specifier: ^3.0.1
-        version: 3.0.1
+      '@rbxts/react':
+        specifier: ^17.2.3
+        version: 17.2.3
+      '@rbxts/react-reflex':
+        specifier: ^0.3.7
+        version: 0.3.7(@rbxts/react@17.2.3)(@rbxts/reflex@4.3.1)
+      '@rbxts/react-roblox':
+        specifier: ^17.2.3
+        version: 17.2.3
+      '@rbxts/reflex':
+        specifier: ^4.3.1
+        version: 4.3.1
       '@rbxts/services':
         specifier: ^1.5.5
         version: 1.5.5
@@ -207,8 +216,23 @@ packages:
   '@rbxts/profile-store@1.0.3':
     resolution: {integrity: sha512-hhaBnE7iabydxMMlun9ezD1oFCfETFXp95r2hjmQUip5GrGLGugAbrzdUhEaqRpdDaM+c4qsj2JfskdAUfz/mw==}
 
-  '@rbxts/roact@3.0.1':
-    resolution: {integrity: sha512-1RVGy8PL078pXdrrYboiKftMKqB4YgYd4Sh/M3aWkhY2TKBBL+hlT1Om35cmCn8sKzdzQwzf2CbmcU49lHoNuw==}
+  '@rbxts/react-reflex@0.3.7':
+    resolution: {integrity: sha512-2hSMSdhJweGi0l5/NkGrxw6rE8gAePb4cD1G6u8DW/9a93CBYEbiFevSkMRP0MqnNQAkyqWg048wSvJBcS0H/g==}
+    peerDependencies:
+      '@rbxts/react': '*'
+      '@rbxts/reflex': '*'
+
+  '@rbxts/react-roblox@17.2.3':
+    resolution: {integrity: sha512-YgS+C3tf92iM1NTK1f6R2O2G8+nbcKFnblA0mTs2Nt878OsWLgxhnhkCBZ6wYv+yeDGD9/sssKHZ6s2LzUWTrQ==}
+
+  '@rbxts/react-vendor@17.2.3':
+    resolution: {integrity: sha512-dWCiVelvTK6h920geaFH/OQ5zoWHyhyqyfH51hKx2/iVZ6OiiyNVJ5UqEIkJMG4HsJ8JnkTORizV3+MtQ41BtA==}
+
+  '@rbxts/react@17.2.3':
+    resolution: {integrity: sha512-IoOB8e2W8MxT0MKWFf0Ls0vT61ImYL6ctHQgz5+oazma6z8bqFtJjgPxOuy6jmMSuyfBe7rYp/muou0kIjZT+Q==}
+
+  '@rbxts/reflex@4.3.1':
+    resolution: {integrity: sha512-S5MbEpHKeRh9NWhwGJ789WbUsmlAlpQziWaNK4+kz1EpaaQ7uHQMZAuN1DYl4+QkqmOSuPlj04COwmArBGWH1Q==}
 
   '@rbxts/services@1.5.5':
     resolution: {integrity: sha512-Hu7QH2ecefS60zpakKG3T2vgABydoOJqpSG7nXr59wFAbPk/cA+OcsntYPHUWyHAat0VFGZ5jNZLTLdiqfssvg==}
@@ -1097,7 +1121,23 @@ snapshots:
 
   '@rbxts/profile-store@1.0.3': {}
 
-  '@rbxts/roact@3.0.1': {}
+  '@rbxts/react-reflex@0.3.7(@rbxts/react@17.2.3)(@rbxts/reflex@4.3.1)':
+    dependencies:
+      '@rbxts/react': 17.2.3
+      '@rbxts/reflex': 4.3.1
+
+  '@rbxts/react-roblox@17.2.3':
+    dependencies:
+      '@rbxts/react': 17.2.3
+      '@rbxts/react-vendor': 17.2.3
+
+  '@rbxts/react-vendor@17.2.3': {}
+
+  '@rbxts/react@17.2.3':
+    dependencies:
+      '@rbxts/react-vendor': 17.2.3
+
+  '@rbxts/reflex@4.3.1': {}
 
   '@rbxts/services@1.5.5': {}
 

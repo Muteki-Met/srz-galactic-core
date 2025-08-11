@@ -1,6 +1,6 @@
 export const GRID_SIZE = 13;
-export const GRID_CELL_SIZE = 6;
-export const CELL_SIZE = 6;
+export const GRID_CELL_SIZE = 8;
+export const CELL_SIZE = 8;
 export const CORE_TIERS = [
 	{ tier: 1, gridSize: 20 }, // Inizio
 	{ tier: 2, gridSize: 24 },

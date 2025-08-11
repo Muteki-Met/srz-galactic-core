@@ -31,7 +31,11 @@ export class PlayerDataService {
 				},
 			],
 			inventory: [],
-			resources: { gold: 1000, energy: 500 },
+			resources: {
+				ferronoxite: 250, // Diamo abbastanza Ferronoxite per costruire i primi edifici
+				voltherium: 100, // Un po' di Voltherium per iniziare
+				silphite: 0, // Il Silphite va prodotto, quindi si parte da zero!
+			},
 		};
 		this.store = ProfileStore.New("PlayerData", this.profileTemplate);
 	}

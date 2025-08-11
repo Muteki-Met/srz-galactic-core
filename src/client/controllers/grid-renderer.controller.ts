@@ -84,8 +84,8 @@ export class GridRendererController implements OnStart {
 				new NumberSequenceKeypoint(0.5, 0.15),
 				new NumberSequenceKeypoint(1, 0.5),
 			]);
-			beam.Width0 = 0.15;
-			beam.Width1 = 0.15;
+			beam.Width0 = 0.5;
+			beam.Width1 = 0.5;
 			beam.LightEmission = 0.6;
 			beam.LightInfluence = 0;
 			beam.Texture = "rbxassetid://446111271"; // Laser sottile più pulito
@@ -103,6 +103,7 @@ export class GridRendererController implements OnStart {
 			sphere.Position = pos.add(new Vector3(0, 0.05, 0)); // Leggermente sopra la griglia
 			sphere.Anchored = true;
 			sphere.CanCollide = false;
+			sphere.Transparency = 0.15;
 			sphere.Material = Enum.Material.Plastic;
 			sphere.Color = Color3.fromRGB(255, 57, 100); // Blu-Turchese neon
 			sphere.Parent = this.gridModel;

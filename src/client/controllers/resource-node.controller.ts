@@ -63,10 +63,14 @@ export class ResourceNodeController implements OnStart {
 		visualPart.Material = Enum.Material.Neon;
 
 		// 3. Imposta il colore in base al tipo di risorsa
-		if (node.resourceType === "gold") {
-			visualPart.Color = Color3.fromRGB(255, 204, 0); // Giallo oro
-		} else if (node.resourceType === "energy") {
-			visualPart.Color = Color3.fromRGB(0, 204, 255); // Ciano energia
+		if (node.resourceType === "ferronoxite") {
+			// Un grigio metallico e lucido per la Ferronoxite
+			visualPart.Color = Color3.fromRGB(180, 185, 190);
+		} else if (node.resourceType === "voltherium") {
+			// Un blu vibrante ed elettrico per il Voltherium
+			visualPart.Color = Color3.fromRGB(70, 120, 255);
 		}
+		// Nota: Non serve un caso per "silphite" qui, perché i giacimenti di Silphite non esistono.
+		// Viene prodotto nelle raffinerie!
 	}
 }
