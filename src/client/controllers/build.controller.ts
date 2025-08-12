@@ -7,6 +7,7 @@ import { ClientEvents, ClientFunctions } from "@client/network";
 import { PlayerDataController } from "@client/controllers/player-data.controller";
 import { BuildModeController } from "@client/controllers/build-mode.controller";
 import { GridUtils } from "@shared/utils/grid.utils";
+import { ResourceId } from "@shared/interface/resource.interface";
 
 @Controller({})
 export class BuildController implements OnStart {
@@ -33,7 +34,7 @@ export class BuildController implements OnStart {
 		// Per ora, la UI o altri sistemi chiameranno `startPlacement`
 		// Per testare, possiamo aggiungerlo qui:
 		task.wait(3);
-		this.startPlacement("gold_mine");
+		this.startPlacement("ferronoxite_extractor");
 	}
 
 	/**
@@ -79,12 +80,40 @@ export class BuildController implements OnStart {
 	private placeBuilding(): void {
 		if (!this.currentBuildingDef || !this.lastCheckedPosition || !this.isLastPositionValid) return;
 
+		// --- INIZIA LA NUOVA LOGICA ---
+
+		// 1. Ottieni i dati necessari
+		const profile = this.playerDataController.getProfile();
+		const buildingDefinition = BUILDINGS.find((b) => b.id === this.currentBuildingDef?.id);
+
+		if (!profile || !buildingDefinition) return;
+
+		// 2. Ottieni il costo dal tier 1
+		const tierData = buildingDefinition.tiers[0];
+		if (!tierData || !tierData.cost) return;
+
+		// 3. Controlla se il giocatore ha abbastanza risorse
+		for (const [resourceId, requiredAmount] of pairs(tierData.cost)) {
+			const playerAmount = profile.resources[resourceId as ResourceId] ?? 0;
+			if (playerAmount < requiredAmount) {
+				warn(
+					`[Client] Non hai abbastanza ${resourceId}. Richiesti: ${requiredAmount}, Posseduti: ${playerAmount}`,
+				);
+				// TODO: Mostra un errore sulla UI
+				return; // Esci e non inviare la richiesta
+			}
+		}
+
+		// --- FINE DELLA NUOVA LOGICA ---
+
+		// 4. Se tutti i controlli passano, invia la richiesta al server
 		print(
 			`[BuildController] Richiesta di piazzamento per ${this.currentBuildingDef.id} a ${this.lastCheckedPosition}`,
 		);
 		ClientEvents.PlaceBuilding.fire(this.currentBuildingDef.id, this.lastCheckedPosition);
+		print("[BuildController] Controllo risorse superato. Richiesta inviata al server.");
 
-		// Dopo aver inviato la richiesta, usciamo dalla modalità di piazzamento.
+		// Opzionale: esci dalla modalità costruzione dopo aver piazzato un edificio
 		this.stopPlacement();
 	}
 
@@ -94,6 +123,10 @@ export class BuildController implements OnStart {
 		this.renderSteppedConnection = RunService.RenderStepped.Connect(() => this.updateHologramPosition());
 	}
 
+	/**
+	 * Mette in ascolto l'evento di click del mouse per piazzare l'edificio selezionato.
+	 * Se il pulsante sinistro del mouse  stato cliccato, chiama `placeBuilding` per eseguire la logica di piazzamento effettivo.
+	 */
 	private connectPlacementInput(): void {
 		this.mouseClickConnection = UserInputService.InputBegan.Connect((input, gameProcessed) => {
 			if (gameProcessed) return;

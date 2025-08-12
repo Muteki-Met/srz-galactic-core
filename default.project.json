@@ -36,6 +36,9 @@
         "$className": "StarterPlayerScripts",
         "TS": {
           "$path": "out/client"
+        },
+        "UI-Labs": {
+          "$path": "out/ui-labs"
         }
       }
     },

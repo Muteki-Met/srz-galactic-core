@@ -8,6 +8,7 @@ import { BuildingService } from "@server/services/building.service";
 import { PlayerDataService } from "@server/services/player-data.service";
 import { GridUtils } from "@shared/utils/grid.utils";
 import { ResourceNodeService } from "@server/services/resource-node.service";
+import { ResourceId } from "@shared/interface/resource.interface";
 
 /**
  * A service for managing grid logic such as placing and validating building positions.
@@ -33,33 +34,62 @@ export class GridService implements OnStart {
 		ServerEvents.PlaceBuilding.connect((player, buildingId, position) => {
 			print(`[Server] Ricevuta richiesta di PIAZZAMENTO da ${player.Name}`);
 
-			const playerData = this.playerDataService.getPlayerData(player);
-			if (!playerData) return;
+			// --- INIZIA A MODIFICARE QUI ---
 
-			const gridPosition = { x: position.X, y: position.Y };
-			if (this.isAreaAvailable(playerData, buildingId, gridPosition)) {
-				print("Piazzamento valido! Aggiorno i dati...");
-				// ---> INIZIA LA NUOVA LOGICA <---
-				const playerData = this.playerDataService.getPlayerData(player);
-				if (!playerData) return;
+			// 1. Ottieni il profilo e la definizione dell'edificio
+			const profile = this.playerDataService.getPlayerData(player); // Usa getProfile, non getPlayerData
+			if (!profile) return;
 
-				const gridCenter = GridUtils.getGridCenter(playerData);
-				if (!gridCenter) return;
-				this.buildingService.createBuildingModel(buildingId, position, gridCenter);
-				// QUI, in futuro, modificheremo l'array playerData.placedBuildings
-				// ---> INIZIA LA NUOVA LOGICA QUI <---
-				const newBuilding: PlacedBuilding = {
-					instanceId: `${buildingId}_${os.time()}`, // Un ID unico temporaneo
-					buildingId: buildingId,
-					tier: 1,
-					position: gridPosition,
-					status: "built",
-				};
-				playerData.placedBuildings.push(newBuilding);
-				print(`Dati aggiornati per ${player.Name}. Edifici totali: ${playerData.placedBuildings.size()}`);
-			} else {
-				warn("Piazzamento non valido! Il client potrebbe essere desincronizzato.");
+			const buildingDefinition = BUILDINGS.find((b) => b.id === buildingId);
+			if (!buildingDefinition) return;
+
+			// 2. Ottieni i dati del tier 1
+			const tierData = buildingDefinition.tiers[0];
+			if (!tierData || !tierData.cost) {
+				warn(`[GridService] Dati di costo non trovati per ${buildingId}`);
+				return;
 			}
+
+			// 3. Controlla le risorse
+			for (const [resourceId, requiredAmount] of pairs(tierData.cost)) {
+				const playerAmount = profile.resources[resourceId as ResourceId] ?? 0;
+				if (playerAmount < requiredAmount) {
+					warn(
+						`[GridService] Risorse insufficienti per ${player.Name}. Richiesti ${requiredAmount} di ${resourceId}, ne ha ${playerAmount}`,
+					);
+					// Qui potresti inviare un evento al client per notificare l'errore
+					return; // Esci se non ha abbastanza risorse
+				}
+			}
+
+			// 4. Controlla se l'area è disponibile (spostato prima della deduzione delle risorse)
+			const gridPosition = { x: position.X, y: position.Y };
+			if (!this.isAreaAvailable(profile, buildingId, gridPosition)) {
+				warn("Piazzamento non valido! Il client potrebbe essere desincronizzato.");
+				return;
+			}
+
+			// 5. Se tutti i controlli sono superati, SOTTRAI le risorse
+			print(`[GridService] Risorse sufficienti. Sottraggo il costo per ${player.Name}`);
+			for (const [resourceId, requiredAmount] of pairs(tierData.cost)) {
+				profile.resources[resourceId as ResourceId] -= requiredAmount;
+			}
+
+			// 6. Aggiungi l'edificio al profilo
+			const newBuilding: PlacedBuilding = {
+				instanceId: `${buildingId}_${os.time()}`,
+				buildingId: buildingId,
+				tier: 1,
+				position: gridPosition,
+				status: "built",
+			};
+			profile.placedBuildings.push(newBuilding);
+			print(`Dati aggiornati per ${player.Name}. Edifici totali: ${profile.placedBuildings.size()}`);
+
+			// 7. Crea il modello fisico
+			const gridCenter = GridUtils.getGridCenter(profile);
+			if (!gridCenter) return;
+			this.buildingService.createBuildingModel(buildingId, position, gridCenter);
 		});
 	}
 

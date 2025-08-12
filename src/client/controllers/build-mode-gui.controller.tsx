@@ -1,3 +1,49 @@
+// in src/client/controllers/build-mode-gui.controller.tsx
+import React from "@rbxts/react";
+import { Controller, OnStart } from "@flamework/core";
+import { Players } from "@rbxts/services";
+import { createRoot, Root } from "@rbxts/react-roblox"; // <-- 1. Importa dal nuovo pacchetto
+
+import { ResourceBar } from "client/components/ResourceBar";
+import { PlayerDataController } from "./player-data.controller";
+import { BuildModeController } from "./build-mode.controller";
+import { BuildModeButton } from "@client/components/BuildModeButton";
+
+//import { BuildModeButton } from "client/components/BuildModeButton"; // <-- 2. Importa il pulsante
+
+@Controller({})
+export class BuildModeGuiController implements OnStart {
+	private root?: Root; // <-- 3. Il tipo corretto è 'Root'
+
+	constructor(
+		private readonly buildModeController: BuildModeController,
+		private readonly playerDataController: PlayerDataController,
+	) {
+	}
+
+	public onStart(): void {
+		const playerGui = Players.LocalPlayer.WaitForChild("PlayerGui") as PlayerGui;
+		const app = new Instance("ScreenGui");
+		app.Name = "ReactApp";
+		app.Parent = playerGui;
+
+		// 4. Usa il nuovo metodo: createRoot() e root.render()
+		const root = createRoot(app);
+		this.root = root; // Salva la root per poterla smontare in futuro se necessario
+
+		root.render(
+			<React.StrictMode>
+				<ResourceBar playerDataController={this.playerDataController} />
+				<BuildModeButton buildModeController={this.buildModeController} />
+			</React.StrictMode>,
+		);
+		
+
+		print("[BuildModeGuiController] Componenti React montati correttamente.");
+	}
+}
+
+/*
 // in src/client/controllers/build-mode-gui.controller.ts
 import { Controller, OnStart } from "@flamework/core";
 import { Players } from "@rbxts/services";
@@ -41,3 +87,4 @@ export class BuildModeGuiController implements OnStart {
 		print("[BuildModeGuiController] Pulsante di costruzione collegato.");
 	}
 }
+*/
