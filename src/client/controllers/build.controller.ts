@@ -31,10 +31,6 @@ export class BuildController implements OnStart {
 
 	public onStart(): void {
 		print("[BuildController] Started.");
-		// Per ora, la UI o altri sistemi chiameranno `startPlacement`
-		// Per testare, possiamo aggiungerlo qui:
-		task.wait(3);
-		this.startPlacement("ferronoxite_extractor");
 	}
 
 	/**

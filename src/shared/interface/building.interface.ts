@@ -89,6 +89,8 @@ export interface BuildingDefinition {
 	/** La categoria a cui appartiene l'edificio. */
 	category: BuildingCategory;
 
+	icon?: string;
+
 	/**
 	 * (Opzionale) Se l'edificio deve essere piazzato su un tipo specifico di giacimento di risorse.
 	 * Se non è definito, l'edificio può essere piazzato su terreno normale.
