@@ -9,6 +9,7 @@ import { PlayerDataService } from "@server/services/player-data.service";
 import { GridUtils } from "@shared/utils/grid.utils";
 import { ResourceNodeService } from "@server/services/resource-node.service";
 import { ResourceId } from "@shared/interface/resource.interface";
+import { HttpService } from "@rbxts/services";
 
 /**
  * A service for managing grid logic such as placing and validating building positions.
@@ -77,7 +78,7 @@ export class GridService implements OnStart {
 
 			// 6. Aggiungi l'edificio al profilo
 			const newBuilding: PlacedBuilding = {
-				instanceId: `${buildingId}_${os.time()}`,
+				instanceId: HttpService.GenerateGUID(false),
 				buildingId: buildingId,
 				tier: 1,
 				position: gridPosition,

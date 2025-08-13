@@ -1,12 +1,20 @@
-import { Controller, OnStart } from "@flamework/core";
+import { Controller, Modding, OnStart, OnInit } from "@flamework/core";
 import Signal from "@rbxts/lemon-signal";
 import { UserInputService } from "@rbxts/services";
+import { BuildController } from "@client/controllers/build.controller";
 
 @Controller({})
-export class BuildModeController implements OnStart {
+export class BuildModeController implements OnStart, OnInit {
 	public onBuildModeEntered = new Signal<() => void>();
 	public onBuildModeExited = new Signal<() => void>();
 	private buildModeActive = false;
+
+	private buildController!: BuildController;
+
+	public onInit(): void {
+		// 3. Ottieni il controller qui, rompendo il ciclo
+		this.buildController = Modding.resolveSingleton(BuildController);
+	}
 
 	onStart(): void {
 		UserInputService.InputBegan.Connect((input, gameProcessed) => {
@@ -29,6 +37,7 @@ export class BuildModeController implements OnStart {
 		if (!this.buildModeActive) return; // Se non siamo in modalità costruzione, non fare nulla
 		this.buildModeActive = false;
 		this.onBuildModeExited.Fire();
+		this.buildController.stopPlacement();
 		print("[BuildModeController] Uscito dalla modalità costruzione (chiamata esterna).");
 	}
 

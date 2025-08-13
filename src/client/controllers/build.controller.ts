@@ -58,7 +58,7 @@ export class BuildController implements OnStart {
 	/**
 	 * Pulisce tutto e esce dalla modalità di piazzamento.
 	 */
-	private stopPlacement(): void {
+	public stopPlacement(): void {
 		this.renderSteppedConnection?.Disconnect();
 		this.mouseClickConnection?.Disconnect();
 		this.destroyHologram();
