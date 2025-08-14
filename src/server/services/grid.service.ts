@@ -35,14 +35,33 @@ export class GridService implements OnStart {
 		ServerEvents.PlaceBuilding.connect((player, buildingId, position) => {
 			print(`[Server] Ricevuta richiesta di PIAZZAMENTO da ${player.Name}`);
 
-			// --- INIZIA A MODIFICARE QUI ---
-
 			// 1. Ottieni il profilo e la definizione dell'edificio
 			const profile = this.playerDataService.getPlayerData(player); // Usa getProfile, non getPlayerData
 			if (!profile) return;
 
+			const inventoryItem = profile.inventory.find((item) => item.buildingId === buildingId);
+
+			// Se non troviamo l'oggetto nell'inventario O se la quantità è zero, il piazzamento non è valido.
+			if (!inventoryItem || inventoryItem.count <= 0) {
+				print(`[GridService] Piazzamento fallito: ${player.Name} non ha un ${buildingId} nel suo inventario.`);
+				// Magari invia una notifica al giocatore
+				return;
+			}
+
 			const buildingDefinition = BUILDINGS.find((b) => b.id === buildingId);
 			if (!buildingDefinition) return;
+
+			if (buildingDefinition.category === "core") {
+				// Controlla se il giocatore ha già un Core piazzato
+				const hasCore = profile.placedBuildings.some(
+					(placed) => this.getBuildingDefinition(placed.buildingId)?.category === "core",
+				);
+
+				if (hasCore) {
+					warn(`[GridService] ${player.Name} ha tentato di piazzare un secondo Core. Richiesta rifiutata.`);
+					return; // Rifiuta il piazzamento
+				}
+			}
 
 			// 2. Ottieni i dati del tier 1
 			const tierData = buildingDefinition.tiers[0];
@@ -52,16 +71,6 @@ export class GridService implements OnStart {
 			}
 
 			// 3. Controlla le risorse
-			for (const [resourceId, requiredAmount] of pairs(tierData.cost)) {
-				const playerAmount = profile.resources[resourceId as ResourceId] ?? 0;
-				if (playerAmount < requiredAmount) {
-					warn(
-						`[GridService] Risorse insufficienti per ${player.Name}. Richiesti ${requiredAmount} di ${resourceId}, ne ha ${playerAmount}`,
-					);
-					// Qui potresti inviare un evento al client per notificare l'errore
-					return; // Esci se non ha abbastanza risorse
-				}
-			}
 
 			// 4. Controlla se l'area è disponibile (spostato prima della deduzione delle risorse)
 			const gridPosition = { x: position.X, y: position.Y };
@@ -91,6 +100,12 @@ export class GridService implements OnStart {
 			const gridCenter = GridUtils.getGridCenter(profile);
 			if (!gridCenter) return;
 			this.buildingService.createBuildingModel(buildingId, position, gridCenter);
+
+			inventoryItem.count -= 1;
+
+			print(`[GridService] ${buildingId} piazzato. Quantità rimanente: ${inventoryItem.count}`);
+
+			this.playerDataService.updateAndNotifyClient(player, profile);
 		});
 	}
 
@@ -156,12 +171,46 @@ export class GridService implements OnStart {
 			// dobbiamo comunque controllare che non ci siano ALTRI edifici sopra.
 			// La logica di collisione esistente qui sotto farà proprio questo.
 		} else {
-			// Se l'edificio NON richiede una risorsa, non può essere piazzato su un nodo.
+			// Se l'edificio NON richiede una risorsa...
 			const targetNode = this.resourceNodeService.getNodeAtPosition(newPosition);
 			if (targetNode) {
 				print("Validazione fallita: Non puoi costruire edifici normali sui giacimenti.");
 				return false;
 			}
+
+			// --- NUOVO CONTROLLO: BUFFER ZONE ---
+			const BUFFER_SIZE = 1; // Definisci una zona cuscinetto di 2 caselle
+
+			// Per ogni nodo risorsa sulla mappa...
+			for (const node of this.resourceNodeService.getAllNodes()) {
+				// ...crea un rettangolo "gonfiato" che include la buffer zone.
+				const bufferedNodeRect = {
+					minX: node.position.x - BUFFER_SIZE,
+					minY: node.position.y - BUFFER_SIZE,
+					maxX: node.position.x + node.size.x + BUFFER_SIZE,
+					maxY: node.position.y + node.size.y + BUFFER_SIZE,
+				};
+
+				// Crea il rettangolo del nuovo edificio (questo codice esiste già più sotto, lo anticipiamo qui)
+				const newBuildingRect = {
+					minX: newPosition.x,
+					minY: newPosition.y,
+					maxX: newPosition.x + buildingDef.size.x,
+					maxY: newPosition.y + buildingDef.size.y,
+				};
+
+				// Controlla se il nuovo edificio si scontra con l'area bufferizzata del nodo.
+				if (
+					newBuildingRect.minX < bufferedNodeRect.maxX &&
+					newBuildingRect.maxX > bufferedNodeRect.minX &&
+					newBuildingRect.minY < bufferedNodeRect.maxY &&
+					newBuildingRect.maxY > bufferedNodeRect.minY
+				) {
+					print(`Validazione fallita: Troppo vicino al giacimento ${node.id}.`);
+					return false; // Collisione con la buffer zone
+				}
+			}
+			// --- FINE DEL NUOVO CONTROLLO ---
 		}
 
 		const coreTierInfo = CORE_TIERS.find((t) => t.tier === playerData.coreTier);

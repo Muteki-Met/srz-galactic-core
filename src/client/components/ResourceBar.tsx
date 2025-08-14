@@ -27,7 +27,7 @@ export function ResourceBar({ playerDataController }: ResourceBarProps) {
 
 		// 1. Colleghiamo la nostra funzione al segnale.
 		//    Ora la funzione non prende argomenti, come si aspetta il segnale.
-		const connection = playerDataController.onProfileLoaded.Connect(updateResources);
+		const connection = playerDataController.onProfileUpdated.Connect(updateResources);
 
 		// 2. Chiamiamo la funzione una volta subito, nel caso in cui il profilo
 		//    fosse già stato caricato prima che questo componente apparisse.

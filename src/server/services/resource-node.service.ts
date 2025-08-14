@@ -28,6 +28,10 @@ export class ResourceNodeService implements OnStart {
 		return this.resourceNodes;
 	}
 
+	public getAllNodes(): ResourceNode[] {
+		return DEFAULT_RESOURCE_NODES;
+	}
+
 	public getNodeAtPosition(position: { x: number; y: number }): ResourceNode | undefined {
 		for (const [_, node] of this.resourceNodes) {
 			const nodeRect = {

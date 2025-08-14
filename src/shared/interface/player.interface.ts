@@ -2,6 +2,7 @@ export interface PlayerProfile {
 	coreTier: number;
 	// NEW: Un array che contiene solo gli edifici piazzati sulla griglia.
 	placedBuildings: PlacedBuilding[];
+
 	inventory: Array<{
 		buildingId: string; // Cambiato da 'building' per coerenza
 		count: number;

@@ -1,26 +1,39 @@
 import { Controller, OnStart } from "@flamework/core";
 import { PlayerDataController } from "@client/controllers/player-data.controller";
-import { GRID_CELL_SIZE } from "@shared/constants/grid.conf";
+import { CORE_TIERS, GRID_CELL_SIZE } from "@shared/constants/grid.conf";
 import { Workspace } from "@rbxts/services";
 import { GridUtils } from "@shared/utils/grid.utils";
 import { BuildModeController } from "@client/controllers/build-mode.controller";
 
 @Controller({})
 export class GridRendererController implements OnStart {
-	private gridModel?: Model;
+	private gridContainer: Model;
 
 	// 1. Inietta il controller dei dati
 	constructor(
 		private readonly playerDataController: PlayerDataController,
 		private readonly buildModeController: BuildModeController,
-	) {}
+	) {
+		this.gridContainer = new Instance("Model");
+		this.gridContainer.Name = "ForceFieldContainer";
+		this.gridContainer.Parent = Workspace;
+
+		// Crea una parte invisibile per ospitare gli attachments
+		const attachmentHost = new Instance("Part");
+		attachmentHost.Name = "AttachmentHost";
+		attachmentHost.Size = new Vector3(1, 1, 1);
+		attachmentHost.Transparency = 1;
+		attachmentHost.Anchored = true;
+		attachmentHost.CanCollide = false;
+		attachmentHost.Parent = this.gridContainer;
+	}
 
 	public onStart(): void {
 		// 2. Ascolta il segnale
 		this.buildModeController.onBuildModeEntered.Connect(() => this.showGrid());
 		this.buildModeController.onBuildModeExited.Connect(() => this.hideGrid());
 
-		this.playerDataController.onProfileLoaded.Connect(() => {
+		this.playerDataController.onProfileUpdated.Connect(() => {
 			if (this.buildModeController.isBuildModeActive()) {
 				// Dovrai aggiungere un getter per questo
 				this.showGrid();
@@ -29,123 +42,73 @@ export class GridRendererController implements OnStart {
 	}
 
 	private showGrid(): void {
-		print("[GridRendererController] Profilo caricato, disegno la griglia...");
+		this.hideGrid();
+
+		const attachmentHost = new Instance("Part");
+		attachmentHost.Name = "AttachmentHost";
+		attachmentHost.Size = new Vector3(1, 1, 1);
+		attachmentHost.Transparency = 1;
+		attachmentHost.Anchored = true;
+		attachmentHost.CanCollide = false;
+		attachmentHost.Parent = this.gridContainer;
 
 		const profile = this.playerDataController.getProfile();
-		if (!profile) return; // Controllo di sicurezza
+		if (!profile) return;
 
-		// 3. Trova il core
-		const coreBuilding = profile.placedBuildings.find((b) => b.buildingId === "core");
-		if (!coreBuilding) return; // Altro controllo
+		const coreTierInfo = CORE_TIERS.find((t) => t.tier === profile.coreTier);
+		if (!coreTierInfo) return;
 
-		// 4. Calcola dimensione e centro
-
-		const gridSize = GridUtils.getGridSize(profile);
-		if (!gridSize) return;
+		const gridSizeInStuds = coreTierInfo.gridSize;
 		const gridCenter = GridUtils.getGridCenter(profile);
 		if (!gridCenter) return;
-		// 5. Disegna la griglia (la logica dei for loop va qui)
-		//    Ricorda di usare `gridSize` e di aggiungere `gridCenter` alle posizioni delle linee.
-		// Esempio per una linea verticale:
-		// line.Position = gridCenter.add(new Vector3(x, 0, 0));
-		// --- Preparazione ---
 
-		// Creiamo un modello per contenere la nostra griglia
-		this.gridModel = new Instance("Model", Workspace);
-		this.gridModel.Name = "GridVisuals";
-		this.gridModel.Parent = Workspace;
+		if (!attachmentHost) return;
 
-		// --- Disegno delle Linee con i Beams ---
-		const beamHolder = new Instance("Part"); // Un pezzo invisibile per ospitare gli attachments
-		beamHolder.Size = new Vector3(1, 1, 1);
-		beamHolder.Transparency = 1;
-		beamHolder.Anchored = true;
-		beamHolder.CanCollide = false;
-		beamHolder.Parent = this.gridModel;
+		const halfGrid = gridSizeInStuds / 2;
+		const fieldHeight = 8;
 
-		const halfGrid = gridSize / 2;
+		// Definiamo i 4 angoli della base
+		const corners = [
+			gridCenter.add(new Vector3(-halfGrid, 0, -halfGrid)),
+			gridCenter.add(new Vector3(halfGrid, 0, -halfGrid)),
+			gridCenter.add(new Vector3(halfGrid, 0, halfGrid)),
+			gridCenter.add(new Vector3(-halfGrid, 0, halfGrid)),
+		];
 
-		// Funzione di aiuto per creare un beam
 		const createBeam = (startPos: Vector3, endPos: Vector3) => {
-			const att0 = new Instance("Attachment", beamHolder);
+			// Mettiamo gli attachments nell'ospite, non nel model!
+			const att0 = new Instance("Attachment", attachmentHost);
 			att0.WorldPosition = startPos;
-			const att1 = new Instance("Attachment", beamHolder);
+			const att1 = new Instance("Attachment", attachmentHost);
 			att1.WorldPosition = endPos;
 
 			const beam = new Instance("Beam");
 			beam.Attachment0 = att0;
 			beam.Attachment1 = att1;
-			beam.Color = new ColorSequence(
-				Color3.fromRGB(255, 57, 100), // Blu-Turchese
-				new Color3(0.7, 0.3, 1), // Viola tenue
-			);
+			beam.Color = new ColorSequence(Color3.fromRGB(0, 200, 255), Color3.fromRGB(100, 255, 255));
+			beam.LightEmission = 0.8;
 			beam.Transparency = new NumberSequence([
-				new NumberSequenceKeypoint(0, 0.5),
-				new NumberSequenceKeypoint(0.5, 0.15),
-				new NumberSequenceKeypoint(1, 0.5),
+				new NumberSequenceKeypoint(0, 0.4),
+				new NumberSequenceKeypoint(1, 0.8),
 			]);
-			beam.Width0 = 0.5;
-			beam.Width1 = 0.5;
-			beam.LightEmission = 0.6;
-			beam.LightInfluence = 0;
-			beam.Texture = "rbxassetid://446111271"; // Laser sottile più pulito
-			beam.TextureMode = Enum.TextureMode.Wrap;
-			beam.TextureLength = 1;
-			beam.TextureSpeed = 0.3; // Lenta animazione
-			beam.FaceCamera = true;
-			beam.Parent = beamHolder;
+			beam.Width0 = 0.3;
+			beam.Width1 = 0.3;
+			beam.Parent = attachmentHost; // Anche il beam va nell'ospite
 		};
 
-		const createIntersectionSphere = (pos: Vector3) => {
-			const sphere = new Instance("Part");
-			sphere.Shape = Enum.PartType.Ball;
-			sphere.Size = new Vector3(0.35, 0.35, 0.35);
-			sphere.Position = pos.add(new Vector3(0, 0.05, 0)); // Leggermente sopra la griglia
-			sphere.Anchored = true;
-			sphere.CanCollide = false;
-			sphere.Transparency = 0.15;
-			sphere.Material = Enum.Material.Plastic;
-			sphere.Color = Color3.fromRGB(255, 57, 100); // Blu-Turchese neon
-			sphere.Parent = this.gridModel;
-		};
+		// Creiamo i pali verticali e le barre orizzontali
+		for (let i = 0; i < corners.size(); i++) {
+			const startCorner = corners[i];
+			const endCorner = corners[(i + 1) % corners.size()];
+			const startCornerTop = startCorner.add(new Vector3(0, fieldHeight, 0));
+			const endCornerTop = endCorner.add(new Vector3(0, fieldHeight, 0));
 
-		// Disegna le linee verticali
-		for (let i = 0; i <= gridSize; i++) {
-			const x = i * GRID_CELL_SIZE;
-			const z = gridSize * GRID_CELL_SIZE;
-			const lStart = gridCenter.add(new Vector3(x, 0, 0));
-			const lEnd = gridCenter.add(new Vector3(x, 0, z));
-			createBeam(lStart, lEnd);
+			createBeam(startCorner, startCornerTop); // Palo verticale
+			createBeam(startCornerTop, endCornerTop); // Barra orizzontale
 		}
-
-		// Disegna le linee orizzontali
-		for (let i = 0; i <= gridSize; i++) {
-			const x = gridSize * GRID_CELL_SIZE;
-			const z = i * GRID_CELL_SIZE;
-			const lStart = gridCenter.add(new Vector3(0, 0, z));
-			const lEnd = gridCenter.add(new Vector3(x, 0, z));
-			createBeam(lStart, lEnd);
-		}
-
-		for (let xIndex = 0; xIndex <= gridSize; xIndex++) {
-			for (let zIndex = 0; zIndex <= gridSize; zIndex++) {
-				const pos = gridCenter.add(new Vector3(xIndex * GRID_CELL_SIZE, 0, zIndex * GRID_CELL_SIZE));
-				createIntersectionSphere(pos);
-			}
-		}
-
-		// --- (Opzionale ma consigliato) Aggiungi Particelle alle Intersezioni ---
-		// Puoi aggiungere un altro ciclo for per creare piccoli emettitori di particelle
-		// nei punti di intersezione per un effetto ancora più dinamico.
-
-		print("[GridRendererController] Griglia sci-fi dinamica creata.");
 	}
 
 	private hideGrid(): void {
-		if (this.gridModel) {
-			this.gridModel.Destroy();
-			this.gridModel = undefined; // Pulisci il riferimento
-			print("[GridRenderer] Griglia nascosta.");
-		}
+		this.gridContainer.ClearAllChildren();
 	}
 }

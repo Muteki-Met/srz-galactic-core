@@ -6,14 +6,14 @@ import Signal from "@rbxts/lemon-signal";
 
 @Controller({ loadOrder: 0 })
 export class PlayerDataController implements OnStart {
-	public readonly onProfileLoaded = new Signal<() => void>(); // Crea il segnale
+	public readonly onProfileUpdated = new Signal<(newProfile: PlayerProfile) => void>();
 	private profile?: PlayerProfile;
 
 	public onStart(): void {
 		ClientEvents.UpdatePlayerData.connect((data) => {
 			print("[PlayerDataController] Dati del profilo ricevuti!");
 			this.profile = data;
-			this.onProfileLoaded.Fire(); // "Annuncia" che i dati sono pronti!
+			this.onProfileUpdated.Fire(data); // "Annuncia" che i dati sono pronti!
 		});
 	}
 

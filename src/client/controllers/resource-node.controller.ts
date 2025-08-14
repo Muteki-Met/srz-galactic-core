@@ -11,7 +11,7 @@ export class ResourceNodeController implements OnStart {
 	constructor(private playerDataController: PlayerDataController) {}
 
 	public async onStart(): Promise<void> {
-		this.playerDataController.onProfileLoaded.Connect(() => {
+		this.playerDataController.onProfileUpdated.Connect(() => {
 			this.drawResourceNodes(); // Chiama la logica di disegno solo ora
 		});
 	}

@@ -8,6 +8,7 @@ import { PlayerDataController } from "@client/controllers/player-data.controller
 import { BuildModeController } from "@client/controllers/build-mode.controller";
 import { GridUtils } from "@shared/utils/grid.utils";
 import { ResourceId } from "@shared/interface/resource.interface";
+import { CELL_SIZE } from "@shared/constants/grid.conf";
 
 @Controller({})
 export class BuildController implements OnStart {
@@ -89,16 +90,6 @@ export class BuildController implements OnStart {
 		if (!tierData || !tierData.cost) return;
 
 		// 3. Controlla se il giocatore ha abbastanza risorse
-		for (const [resourceId, requiredAmount] of pairs(tierData.cost)) {
-			const playerAmount = profile.resources[resourceId as ResourceId] ?? 0;
-			if (playerAmount < requiredAmount) {
-				warn(
-					`[Client] Non hai abbastanza ${resourceId}. Richiesti: ${requiredAmount}, Posseduti: ${playerAmount}`,
-				);
-				// TODO: Mostra un errore sulla UI
-				return; // Esci e non inviare la richiesta
-			}
-		}
 
 		// --- FINE DELLA NUOVA LOGICA ---
 
@@ -146,6 +137,19 @@ export class BuildController implements OnStart {
 				}
 			}
 			this.placementService.addInstanceToIgnoreList(this.hologram);
+
+			const boundsPart = this.hologram.FindFirstChild("Bounds", true);
+			if (boundsPart) {
+				const surfaceGui = boundsPart.FindFirstChildOfClass("SurfaceGui");
+				if (surfaceGui) {
+					// Rendi visibili tutti i frame dentro la SurfaceGui
+					for (const frame of surfaceGui.GetChildren()) {
+						if (frame.IsA("Frame")) {
+							frame.Visible = true;
+						}
+					}
+				}
+			}
 		} else {
 			warn(`[BuildController] Modello non trovato: ${this.currentBuildingDef.model}`);
 		}
@@ -174,7 +178,15 @@ export class BuildController implements OnStart {
 
 		// Sposta l'ologramma ogni frame
 		const buildingSize = new Vector2(this.currentBuildingDef.size.x, this.currentBuildingDef.size.y);
-		const finalWorldCFrame = GridUtils.gridToWorldCFrame(gridPos, buildingSize, gridCenter);
+		let finalWorldCFrame = GridUtils.gridToWorldCFrame(gridPos, buildingSize, gridCenter);
+
+		// Solleviamo il modello in modo che la sua base appoggi sulla griglia.
+		// Prendiamo l'altezza del PrimaryPart come riferimento.
+		if (this.hologram.PrimaryPart) {
+			const modelHeight = this.hologram.PrimaryPart.Size.Y;
+			finalWorldCFrame = finalWorldCFrame.add(new Vector3(0, modelHeight / 2, 0));
+		}
+
 		this.hologram.PivotTo(finalWorldCFrame);
 
 		// Controlla la validità solo se la cella è cambiata
@@ -194,9 +206,25 @@ export class BuildController implements OnStart {
 	private setHologramColor(isValid: boolean): void {
 		if (!this.hologram) return;
 		const color = isValid ? Color3.fromRGB(0, 255, 127) : Color3.fromRGB(255, 50, 50);
+		// Colora le parti del modello 3D
 		for (const part of this.hologram.GetDescendants()) {
-			if (part.IsA("BasePart")) {
+			if (part.IsA("BasePart") && part.Name !== "Bounds") {
+				// Escludiamo la parte Bounds
+				part.Transparency = isValid ? 0.5 : 0.3; // Esempio: rendiamo il modello più o meno trasparente
 				part.Color = color;
+			}
+		}
+
+		// Colora i frame dell'outline
+		const boundsPart = this.hologram.FindFirstChild("Bounds", true);
+		if (boundsPart) {
+			const surfaceGui = boundsPart.FindFirstChildOfClass("SurfaceGui");
+			if (surfaceGui) {
+				for (const frame of surfaceGui.GetChildren()) {
+					if (frame.IsA("Frame")) {
+						frame.BackgroundColor3 = color;
+					}
+				}
 			}
 		}
 	}

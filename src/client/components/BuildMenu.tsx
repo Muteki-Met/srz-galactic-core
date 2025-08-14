@@ -20,29 +20,25 @@ export function BuildMenu({ buildModeController, playerDataController, buildCont
 	// Aggiungiamo uno stato per le risorse del giocatore, così la UI si aggiorna
 	const [isOpen, setIsOpen] = useState(buildModeController.isBuildModeActive());
 	const [playerResources, setPlayerResources] = useState(playerDataController.getProfile()?.resources);
+	const [inventory, setInventory] = useState(playerDataController.getProfile()?.inventory ?? []);
 
 	useEffect(() => {
-		// Logica per aprire/chiudere il menu
+		// 1. Gestisce l'apertura/chiusura del menu
 		const enteredConnection = buildModeController.onBuildModeEntered.Connect(() => setIsOpen(true));
 		const exitedConnection = buildModeController.onBuildModeExited.Connect(() => setIsOpen(false));
 
-		// --- CORREZIONE 2: Correggiamo come ci connettiamo a onProfileLoaded ---
-		// La funzione non riceve argomenti. Chiamiamo getProfile() al suo interno.
-		const profileLoadedConnection = playerDataController.onProfileLoaded.Connect(() => {
-			const profile = playerDataController.getProfile();
-			if (profile) {
-				setPlayerResources(profile.resources);
-			}
+		// 2. Gestisce TUTTI gli aggiornamenti del profilo (inventario, risorse, ecc.)
+		const profileUpdatedConnection = playerDataController.onProfileUpdated.Connect((profile) => {
+			print("[BuildMenu] Profilo aggiornato, aggiorno la UI.");
+			setInventory(profile.inventory);
+			// Potremmo anche aggiornare le risorse qui se servisse in futuro
 		});
 
-		// Chiamata iniziale per sicurezza
-		setPlayerResources(playerDataController.getProfile()?.resources);
-
-		// Funzione di pulizia per tutte le connessioni
+		// 3. Funzione di pulizia che disconnette TUTTO
 		return () => {
 			enteredConnection.Disconnect();
 			exitedConnection.Disconnect();
-			profileLoadedConnection.Disconnect();
+			profileUpdatedConnection.Disconnect();
 		};
 	}, [buildModeController, playerDataController]); // Dipendenze corrette
 
@@ -73,54 +69,51 @@ export function BuildMenu({ buildModeController, playerDataController, buildCont
 				SortOrder={Enum.SortOrder.LayoutOrder}
 				Padding={new UDim(0, 10)}
 			/>
+			{inventory.map((inventoryItem) => {
+				if (inventoryItem.count === 0) return; // Non mostrare edifici esauriti
 
-			{BUILDINGS.map((building) => {
-				const tier1Cost = building.tiers[0]?.cost;
-				let canAfford = true;
-				if (tier1Cost && playerResources) {
-					for (const [resource, requiredAmount] of pairs(tier1Cost)) {
-						const playerAmount = playerResources[resource as ResourceId] ?? 0;
-						if (playerAmount < requiredAmount) {
-							canAfford = false;
-							break;
-						}
-					}
-				} else {
-					canAfford = false;
-				}
+				const buildingDef = BUILDINGS.find((b) => b.id === inventoryItem.buildingId);
+				if (!buildingDef) return;
 
 				return (
 					<textbutton
-						key={building.id}
+						key={buildingDef.id}
 						Size={new UDim2(0, 100, 1, 0)}
 						Text=""
 						BackgroundColor3={Color3.fromRGB(50, 50, 50)}
-						BackgroundTransparency={canAfford ? 0 : 0.5}
-						AutoButtonColor={canAfford}
 						Event={{
-							MouseButton1Click: () => {
-								if (canAfford) {
-									buildController.startPlacement(building.id);
-								}
-							},
+							MouseButton1Click: () => buildController.startPlacement(buildingDef.id),
 						}}
 					>
-						<uicorner CornerRadius={new UDim(0, 6)} />
+						{/* Questo oggetto magico ordinerà le label per noi! */}
 						<uilistlayout
+							SortOrder={Enum.SortOrder.LayoutOrder}
 							FillDirection={Enum.FillDirection.Vertical}
 							HorizontalAlignment={Enum.HorizontalAlignment.Center}
+							VerticalAlignment={Enum.VerticalAlignment.Center}
 							Padding={new UDim(0, 5)}
 						/>
+
+						{/* Label per il NOME dell'edificio */}
 						<textlabel
-							Text={building.name}
-							Size={new UDim2(1, 0, 0, 20)}
+							key="name"
+							LayoutOrder={1} // Prima viene il nome...
+							Text={buildingDef.name} // <-- Usiamo il nome dalla definizione
+							Size={new UDim2(1, -10, 0.5, 0)}
 							BackgroundTransparency={1}
 							TextColor3={Color3.fromRGB(255, 255, 255)}
+							TextScaled={true}
 						/>
-						<imagelabel
-							Image={building.icon} // Corretto da 'icon' a 'iconAssetId'
-							Size={new UDim2(0, 50, 0, 50)}
+
+						{/* Label per la QUANTITÀ */}
+						<textlabel
+							key="quantity"
+							LayoutOrder={2} // ...poi la quantità
+							Text={`x${inventoryItem.count}`} // <-- La quantità dall'inventario
+							Size={new UDim2(1, -10, 0.3, 0)}
 							BackgroundTransparency={1}
+							TextColor3={Color3.fromRGB(200, 200, 200)} // Un grigio chiaro per distinguerla
+							TextScaled={true}
 						/>
 					</textbutton>
 				);

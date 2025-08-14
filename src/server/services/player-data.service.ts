@@ -30,7 +30,7 @@ export class PlayerDataService {
 					status: "built",
 				},
 			],
-			inventory: [],
+			inventory: [{ buildingId: "ferronoxite_extractor", count: 1 }],
 			resources: {
 				ferronoxite: 250, // Diamo abbastanza Ferronoxite per costruire i primi edifici
 				voltherium: 100, // Un po' di Voltherium per iniziare
@@ -93,5 +93,13 @@ export class PlayerDataService {
 			this.profiles.delete(player);
 			print(`[PlayerDataService] Profile session for ${player.Name} released.`);
 		}
+	}
+
+	public updateAndNotifyClient(player: Player, profileData: PlayerProfile): void {
+		// Potremmo aggiungere logica di salvataggio qui in futuro, ma per ora...
+		// la cosa più importante è notificare il client.
+
+		ClientEvents.UpdatePlayerData.fire(player, profileData);
+		print(`[PlayerDataService] Inviato profilo aggiornato a ${player.Name}`);
 	}
 }
