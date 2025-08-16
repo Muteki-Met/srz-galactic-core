@@ -6,7 +6,13 @@ import { ReplicatedStorage, Workspace } from "@rbxts/services";
 
 @Service({})
 export class BuildingService {
-	public createBuildingModel(buildingId: string, position: Vector2, gridCenter: Vector3): void {
+	public createBuildingModel(
+		player: Player,
+		instanceId: string,
+		buildingId: string,
+		gridPosition: Vector2,
+		gridCenter: Vector3,
+	): void {
 		const buildingData = BUILDINGS.find((b) => b.id === buildingId);
 		if (!buildingData) return;
 
@@ -15,11 +21,16 @@ export class BuildingService {
 		if (!modelRef || !modelRef.IsA("Model")) return;
 
 		const newBuilding = modelRef.Clone();
+		newBuilding.Name = instanceId;
 		const worldCFrame = GridUtils.gridToWorldCFrame(
-			position,
+			gridPosition,
 			new Vector2(buildingData.size.x, buildingData.size.y),
 			gridCenter,
 		);
+
+		newBuilding.SetAttribute("BuildingId", buildingId);
+		newBuilding.SetAttribute("OwnerUserId", player.UserId);
+		newBuilding.SetAttribute("InstanceId", instanceId);
 
 		newBuilding.Parent = Workspace;
 		newBuilding.PivotTo(worldCFrame);

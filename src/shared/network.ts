@@ -17,6 +17,8 @@ export const functions = Networking.createFunction<ServerFunctions, ClientFuncti
 
 interface ServerEvents {
 	PlaceBuilding(buildingId: string, position: Vector2): void;
+
+	SalvageBuilding(instanceId: string): void;
 }
 
 interface ClientEvents {

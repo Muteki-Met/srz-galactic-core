@@ -18,6 +18,11 @@ export class BuildController implements OnStart {
 	private lastCheckedPosition?: Vector2;
 	private isLastPositionValid = false;
 
+	private pendingPlacement = false;
+
+	private isMoving = false;
+	private movingInstanceId?: string;
+
 	// Connessioni agli eventi che dobbiamo poter disconnettere
 	private renderSteppedConnection?: RBXScriptConnection;
 	private mouseClickConnection?: RBXScriptConnection;
@@ -51,7 +56,7 @@ export class BuildController implements OnStart {
 		}
 
 		this.buildModeController.enterBuildMode(); // 1. Entra in modalità costruzione
-		this.createHologram(); // 2. Crea il modello fantasma
+		this.createHologram(buildingId); // 2. Crea il modello fantasma
 		this.connectUpdateLoop(); // 3. Inizia ad aggiornare la posizione dell'ologramma
 		this.connectPlacementInput(); // 4. Mettiti in ascolto del click per piazzare
 	}
@@ -71,12 +76,46 @@ export class BuildController implements OnStart {
 		this.buildModeController.exitBuildMode();
 	}
 
+	public startMovingBuilding(buildingModel: Model) {
+		// 1. Estrai le informazioni necessarie dal modello
+		const buildingId = buildingModel.GetAttribute("BuildingId") as string;
+		this.movingInstanceId = buildingModel.GetAttribute("InstanceId") as string;
+
+		if (!buildingId || !this.movingInstanceId) {
+			warn("Tentativo di spostare un edificio senza ID validi.");
+			return;
+		}
+
+		// 2. Imposta lo stato del controller
+		this.isMoving = true;
+		this.currentBuildingDef = BUILDINGS.find((b) => b.id === buildingId);
+		this.hologram = buildingModel; // <-- Il trucco magico! Usiamo il modello reale come ologramma.
+
+		if (!this.currentBuildingDef) return;
+
+		// 3. Applica un effetto "ologramma" per renderlo semi-trasparente
+		this.setHologramTransparency(0.5); // Creeremo questa funzione tra poco
+
+		// 4. Avvia il loop di aggiornamento che muove l'ologramma con il mouse
+		this.connectUpdateLoop();
+	}
+
+	private setHologramTransparency(transparency: number) {
+		if (!this.hologram) return;
+		for (const child of this.hologram.GetDescendants()) {
+			if (child.IsA("BasePart")) {
+				child.Transparency = transparency;
+			}
+		}
+	}
+
 	/**
 	 * Gestisce la logica di piazzamento effettivo.
 	 */
 	private placeBuilding(): void {
-		if (!this.currentBuildingDef || !this.lastCheckedPosition || !this.isLastPositionValid) return;
-
+		if (!this.currentBuildingDef || !this.lastCheckedPosition || !this.isLastPositionValid || this.pendingPlacement)
+			return;
+	
 		// --- INIZIA LA NUOVA LOGICA ---
 
 		// 1. Ottieni i dati necessari
@@ -91,17 +130,23 @@ export class BuildController implements OnStart {
 
 		// 3. Controlla se il giocatore ha abbastanza risorse
 
-		// --- FINE DELLA NUOVA LOGICA ---
+		this.resetHologramAppearance();
 
-		// 4. Se tutti i controlli passano, invia la richiesta al server
-		print(
-			`[BuildController] Richiesta di piazzamento per ${this.currentBuildingDef.id} a ${this.lastCheckedPosition}`,
-		);
+		// 4) Invia la richiesta al server
+		this.pendingPlacement = true;
 		ClientEvents.PlaceBuilding.fire(this.currentBuildingDef.id, this.lastCheckedPosition);
-		print("[BuildController] Controllo risorse superato. Richiesta inviata al server.");
+		print("[BuildController] Richiesta inviata. In attesa aggiornamento profilo...");
 
-		// Opzionale: esci dalla modalità costruzione dopo aver piazzato un edificio
-		this.stopPlacement();
+		// 5) Pulisci SOLO l’ologramma, resta in build mode per poter selezionare
+		this.cleanupPlacementVisualsOnly();
+
+		// 6) Attendi UNA VOLTA l'aggiornamento del profilo per sbloccare lo stato
+		const disconnect = this.playerDataController.onProfileUpdated.Connect(() => {
+			if (!this.pendingPlacement) return;
+			this.pendingPlacement = false;
+			disconnect.Disconnect();
+			print("[BuildController] Profilo aggiornato: puoi selezionare e recuperare il nuovo edificio.");
+		});
 	}
 
 	// --- Metodi Helper Privati ---
@@ -123,12 +168,42 @@ export class BuildController implements OnStart {
 		});
 	}
 
-	private createHologram(): void {
+	// in BuildController
+
+	private resetHologramAppearance() {
+		// Guard di base
+		if (!this.hologram) return;
+
+		const buildingId = this.hologram.GetAttribute("BuildingId") as string | undefined;
+		if (!buildingId) return;
+
+		// Lookup del nome modello via BUILDINGS
+		const modelName = BUILDINGS.find((b) => b.id === buildingId)?.model;
+		if (!modelName || !this.modelFolder) return;
+
+		const templateRef = this.modelFolder.FindFirstChild(modelName);
+		if (!templateRef || !templateRef.IsA("Model")) return;
+
+		// Ripristina appearance dalle parti corrispondenti nel template
+		for (const hologramPart of this.hologram.GetDescendants()) {
+			if (hologramPart.IsA("BasePart") /* && hologramPart.Name !== "Bounds" */) {
+				const templatePart = templateRef.FindFirstChild(hologramPart.Name, true);
+				if (templatePart && templatePart.IsA("BasePart")) {
+					hologramPart.Color = templatePart.Color;
+					hologramPart.Transparency = templatePart.Transparency;
+					hologramPart.Material = templatePart.Material;
+				}
+			}
+		}
+	}
+
+	private createHologram(buildingId?: string): void {
 		if (!this.currentBuildingDef) return;
 		const modelRef = this.modelFolder?.FindFirstChild(this.currentBuildingDef.model);
 
 		if (modelRef && modelRef.IsA("Model")) {
 			this.hologram = modelRef.Clone();
+			if (buildingId) this.hologram.SetAttribute("BuildingId", buildingId);
 			this.hologram.Parent = Workspace;
 			for (const descendant of this.hologram.GetDescendants()) {
 				if (descendant.IsA("BasePart")) {
@@ -201,6 +276,16 @@ export class BuildController implements OnStart {
 				this.setHologramColor(isValid);
 			});
 		}
+	}
+
+	private cleanupPlacementVisualsOnly(): void {
+		this.renderSteppedConnection?.Disconnect();
+		this.mouseClickConnection?.Disconnect();
+		this.destroyHologram();
+
+		this.lastCheckedPosition = undefined;
+		this.isLastPositionValid = false;
+		// NOTA: NON chiamare this.buildModeController.exitBuildMode() qui
 	}
 
 	private setHologramColor(isValid: boolean): void {

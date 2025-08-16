@@ -72,12 +72,16 @@ export class PlayerDataService {
 		}
 
 		// 3. Itera su ogni edificio salvato nei dati del giocatore.
-		for (const savedBuilding of profileData.placedBuildings) {
-			// 4. Per ogni edificio, chiama il BuildingService per crearlo nel mondo.
-			//    Ricorda che createBuildingModel ora ha bisogno di 3 argomenti!
+		for (const building of profile.Data.placedBuildings) {
+			const gridCenter = GridUtils.getGridCenter(profile.Data);
+			if (!gridCenter) continue;
+
+			// La chiamata corretta:
 			this.buildingService.createBuildingModel(
-				savedBuilding.buildingId,
-				new Vector2(savedBuilding.position.x, savedBuilding.position.y),
+				player,
+				building.instanceId,
+				building.buildingId,
+				new Vector2(building.position.x, building.position.y),
 				gridCenter,
 			);
 		}

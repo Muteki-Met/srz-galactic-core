@@ -9,7 +9,7 @@ import { PlayerDataService } from "@server/services/player-data.service";
 import { GridUtils } from "@shared/utils/grid.utils";
 import { ResourceNodeService } from "@server/services/resource-node.service";
 import { ResourceId } from "@shared/interface/resource.interface";
-import { HttpService } from "@rbxts/services";
+import { HttpService, Workspace } from "@rbxts/services";
 
 /**
  * A service for managing grid logic such as placing and validating building positions.
@@ -99,12 +99,56 @@ export class GridService implements OnStart {
 			// 7. Crea il modello fisico
 			const gridCenter = GridUtils.getGridCenter(profile);
 			if (!gridCenter) return;
-			this.buildingService.createBuildingModel(buildingId, position, gridCenter);
+			this.buildingService.createBuildingModel(
+				player,
+				newBuilding.instanceId,
+				buildingId,
+				position, // La posizione (Vector2) che arriva dall'evento
+				gridCenter,
+			);
 
 			inventoryItem.count -= 1;
 
 			print(`[GridService] ${buildingId} piazzato. Quantità rimanente: ${inventoryItem.count}`);
 
+			this.playerDataService.updateAndNotifyClient(player, profile);
+		});
+
+		ServerEvents.SalvageBuilding.connect((player, instanceId) => {
+			print(`[Server] Ricevuta richiesta di recupero da ${player.Name} per ${instanceId}`);
+
+			const profile = this.playerDataService.getPlayerData(player);
+			if (!profile) return;
+
+			// Trova l'indice dell'edificio da rimuovere
+			const buildingIndex = profile.placedBuildings.findIndex((b) => b.instanceId === instanceId);
+			if (buildingIndex === -1) {
+				return;
+			}
+
+			// Rimuovi l'edificio dall'array e tienine una copia
+			const removedBuilding = profile.placedBuildings.remove(buildingIndex);
+			if (!removedBuilding) return;
+
+			// Aggiungi l'edificio all'inventario
+			const inventoryItem = profile.inventory.find((i) => i.buildingId === removedBuilding.buildingId);
+			if (inventoryItem) {
+				inventoryItem.count += 1;
+			} else {
+				// Se per qualche motivo non c'era, lo aggiungiamo
+				profile.inventory.push({ buildingId: removedBuilding.buildingId, count: 1 });
+			}
+
+			// Distruggi il modello 3D
+			const buildingModel = Workspace.FindFirstChild(instanceId); // Assumendo che il modello abbia questo nome
+			if (buildingModel) {
+				buildingModel.Destroy();
+			} else {
+				// Se non lo troviamo per nome, dobbiamo trovare un altro modo...
+				// Per ora, questo dovrebbe funzionare se il nome del modello è l'instanceId
+			}
+
+			// Notifica il client
 			this.playerDataService.updateAndNotifyClient(player, profile);
 		});
 	}

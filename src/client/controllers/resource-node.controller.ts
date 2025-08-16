@@ -8,6 +8,8 @@ import { PlayerDataController } from "@client/controllers/player-data.controller
 
 @Controller({})
 export class ResourceNodeController implements OnStart {
+	private resourceNodesModel?: Model;
+
 	constructor(private playerDataController: PlayerDataController) {}
 
 	public async onStart(): Promise<void> {
@@ -17,6 +19,10 @@ export class ResourceNodeController implements OnStart {
 	}
 
 	private async drawResourceNodes(): Promise<void> {
+		// Pulizia prima del ridisegno
+		const existing = this.resourceNodesModel ?? Workspace.FindFirstChild("ResourceNodesVisuals");
+		if (existing && existing.IsA("Model")) existing.Destroy();
+
 		print("[ResourceNodeController] Profilo caricato, richiesta dei nodi risorsa...");
 		const resourceNodes = await ClientFunctions.GetResourceNodes();
 
@@ -29,9 +35,10 @@ export class ResourceNodeController implements OnStart {
 			const gridCenter = GridUtils.getGridCenter(profile);
 			if (!gridCenter) return;
 			// Crea un modello per tenere tutto pulito
+			// Crea e memorizza
 			const resourceNodesModel = new Instance("Model", Workspace);
 			resourceNodesModel.Name = "ResourceNodesVisuals";
-
+			this.resourceNodesModel = resourceNodesModel;
 			// Itera e disegna ogni nodo
 			for (const node of resourceNodes) {
 				this.createNodeVisual(node, gridCenter, resourceNodesModel);
@@ -59,8 +66,8 @@ export class ResourceNodeController implements OnStart {
 		visualPart.CanCollide = false;
 		visualPart.Size = worldSize;
 		visualPart.CFrame = worldCFrame;
-		visualPart.Transparency = 0.6;
-		visualPart.Material = Enum.Material.Neon;
+		visualPart.Transparency = 0.8;
+		visualPart.Material = Enum.Material.Plastic;
 
 		// 3. Imposta il colore in base al tipo di risorsa
 		if (node.resourceType === "ferronoxite") {
